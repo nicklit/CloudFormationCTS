@@ -1,0 +1,535 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "CloudTrailTest": {
+      "Type": "AWS::CloudTrail::Trail",
+      "Properties": {
+        "IncludeGlobalServiceEvents": "True",
+        "IsMultiRegionTrail": "True",
+        "IsLogging": "True",
+        "S3BucketName": {
+          "Ref": "cloudtrailtestcts1"
+        }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "32361f1e-a18b-4ea3-ace0-2aae69ad73d6"
+        }
+      },
+      "DependsOn": [
+        "cloudtrailtestcts1",
+        "cloudtrailtestpolicy"
+      ]
+    },
+    "cloudtrailtestcts1": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "cloudtrailtestcts1"
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "6b6f8b31-27b3-4992-8960-29fd61261b8d"
+        }
+      }
+    },
+    "cloudtrailtestpolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "cloudtrailtestcts1"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AWSCloudTrailAclCheck",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              },
+              "Action": "s3:GetBucketAcl",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "cloudtrailtestcts1"
+                    }
+                  ]
+                ]
+              }
+            },
+            {
+              "Sid": "AWSCloudTrailWrite",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              },
+              "Action": "s3:PutObject",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:s3:::",
+                    {
+                      "Ref": "cloudtrailtestcts1"
+                    },
+                    "/AWSLogs/",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    "/*"
+                  ]
+                ]
+              },
+              "Condition": {
+                "StringEquals": {
+                  "s3:x-amz-acl": "bucket-owner-full-control"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "30994607-e308-4ef2-986a-5f0adb678e3a"
+        }
+      }
+    },
+    "AdministratorCFT": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AdministratorAccess"
+        ],
+        "RoleName": "AdmininstratorCFT"
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "06ce9cf6-881c-4426-a968-6574b1278ee4"
+        }
+      },
+      "DependsOn": []
+    },
+    "DenyPolicyCFT": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "DenyPolicyCFT",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "CTrailNoTurnOff",
+              "Effect": "Deny",
+              "Action": [
+                "cloudtrail:StopLogging",
+                "cloudtrail:DeleteTrail"
+              ],
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:aws:cloudtrail:",
+                    {
+                      "Ref": "AWS::Region"
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId"
+                    },
+                    ":trail/",
+                    {
+                      "Ref": "CloudTrailTest"
+                    }
+                  ]
+                ]
+              }
+            },
+            {
+              "Sid": "ReadOnlyBuckets",
+              "Effect": "Deny",
+              "NotAction": [
+                "s3:List*",
+                "s3:Get*"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::",
+                      {
+                        "Ref": "cloudtrailtestcts1"
+                      },
+                      "/*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      "-dlt-utilization/*"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Sid": "DenyDeleteRoles",
+              "Effect": "Deny",
+              "Action": [
+                "iam:AttachRolePolicy",
+                "iam:AttachUserPolicy",
+                "iam:DeleteRole",
+                "iam:DeleteRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:PutRolePolicy",
+                "iam:RemoveRoleFromInstanceProfile"
+              ],
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":role/",
+                      {
+                        "Ref": "AdministratorCFT"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":role/",
+                      {
+                        "Ref": "ContributorCFT"
+                      }
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:iam::",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":role/",
+                      {
+                        "Ref": "ReadOnlyCFT"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "Sid": "DenyNewUsers",
+              "Effect": "Deny",
+              "Action": [
+                "iam:CreateGroup",
+                "iam:CreateUser"
+              ],
+              "Resource": [
+                "*"
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "AdministratorCFT"
+          },
+          {
+            "Ref": "ContributorCFT"
+          }
+        ]
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "0f622260-58f4-4bee-a44b-e8145958f479"
+        }
+      },
+      "DependsOn": []
+    },
+    "ContributorCFT": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/PowerUserAccess"
+        ],
+        "RoleName": "ContributorCFT"
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "5dfb09b6-c893-408e-bdc0-86a44d4649a1"
+        }
+      }
+    },
+    "ReadOnlyCFT": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/ReadOnlyAccess"
+        ],
+        "RoleName": "ReadOnlyCFT"
+      },
+      "Metadata": {
+        "AWS::CloudFormation::Designer": {
+          "id": "4f82fdea-7deb-4c91-82e2-53866c2a562c"
+        }
+      }
+    }
+  },
+  "Metadata": {
+    "AWS::CloudFormation::Designer": {
+      "32361f1e-a18b-4ea3-ace0-2aae69ad73d6": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 240,
+          "y": 80
+        },
+        "z": 1,
+        "embeds": [],
+        "dependson": [
+          "6b6f8b31-27b3-4992-8960-29fd61261b8d",
+          "30994607-e308-4ef2-986a-5f0adb678e3a"
+        ],
+        "isrelatedto": [
+          "6b6f8b31-27b3-4992-8960-29fd61261b8d"
+        ]
+      },
+      "0f622260-58f4-4bee-a44b-e8145958f479": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": -100,
+          "y": 160
+        },
+        "z": 1,
+        "embeds": [],
+        "isassociatedwith": [
+          "06ce9cf6-881c-4426-a968-6574b1278ee4",
+          "5dfb09b6-c893-408e-bdc0-86a44d4649a1"
+        ],
+        "dependson": [
+          "06ce9cf6-881c-4426-a968-6574b1278ee4"
+        ],
+        "isrelatedto": [
+          "32361f1e-a18b-4ea3-ace0-2aae69ad73d6",
+          "6b6f8b31-27b3-4992-8960-29fd61261b8d",
+          "0f622260-58f4-4bee-a44b-e8145958f479",
+          "4f82fdea-7deb-4c91-82e2-53866c2a562c"
+        ]
+      },
+      "06ce9cf6-881c-4426-a968-6574b1278ee4": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": -200,
+          "y": 160
+        },
+        "z": 1,
+        "embeds": [],
+        "dependson": [
+          "0f622260-58f4-4bee-a44b-e8145958f479"
+        ]
+      },
+      "093e15bc-32a6-41a0-80b9-d5427c2cfa2a": {
+        "source": {
+          "id": "06ce9cf6-881c-4426-a968-6574b1278ee4"
+        },
+        "target": {
+          "id": "0f622260-58f4-4bee-a44b-e8145958f479"
+        },
+        "z": 2
+      },
+      "c406f5b6-5a3d-4d0b-95a2-1db8c9de8c98": {
+        "source": {
+          "id": "0f622260-58f4-4bee-a44b-e8145958f479"
+        },
+        "target": {
+          "id": "06ce9cf6-881c-4426-a968-6574b1278ee4"
+        },
+        "z": 2
+      },
+      "6b6f8b31-27b3-4992-8960-29fd61261b8d": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 240,
+          "y": 240
+        },
+        "z": 1,
+        "embeds": []
+      },
+      "56c6da3a-2e50-4286-9fcf-2294eae6dbe1": {
+        "source": {
+          "id": "32361f1e-a18b-4ea3-ace0-2aae69ad73d6"
+        },
+        "target": {
+          "id": "6b6f8b31-27b3-4992-8960-29fd61261b8d"
+        },
+        "z": 2
+      },
+      "393982e5-2b3e-4dcd-86d0-fd19e77e2801": {
+        "source": {
+          "id": "0f622260-58f4-4bee-a44b-e8145958f479",
+          "selector": "g:nth-child(1) g:nth-child(4) g:nth-child(4) circle:nth-child(1)     ",
+          "port": "AWS::DependencyLink-*"
+        },
+        "target": {
+          "id": "06ce9cf6-881c-4426-a968-6574b1278ee4"
+        },
+        "z": 3
+      },
+      "30994607-e308-4ef2-986a-5f0adb678e3a": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 310,
+          "y": 160
+        },
+        "z": 1,
+        "embeds": [],
+        "isassociatedwith": [
+          "6b6f8b31-27b3-4992-8960-29fd61261b8d"
+        ],
+        "isrelatedto": [
+          "6b6f8b31-27b3-4992-8960-29fd61261b8d"
+        ]
+      },
+      "5dfb09b6-c893-408e-bdc0-86a44d4649a1": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 10,
+          "y": 160
+        },
+        "z": 1,
+        "embeds": []
+      },
+      "5b5145cd-b4e8-4c14-ac5c-7fa466dae589": {
+        "source": {
+          "id": "06ce9cf6-881c-4426-a968-6574b1278ee4",
+          "selector": "g:nth-child(1) g:nth-child(4) g:nth-child(2) circle:nth-child(1)     ",
+          "port": "AWS::DependencyLink-*"
+        },
+        "target": {
+          "id": "0f622260-58f4-4bee-a44b-e8145958f479"
+        },
+        "z": 3
+      },
+      "493827a2-8f51-4fc4-bd5d-5555000dced4": {
+        "source": {
+          "id": "06ce9cf6-881c-4426-a968-6574b1278ee4",
+          "selector": "g:nth-child(1) g:nth-child(4) g:nth-child(2) circle:nth-child(1)     ",
+          "port": "AWS::DependencyLink-*"
+        },
+        "target": {
+          "id": "0f622260-58f4-4bee-a44b-e8145958f479"
+        },
+        "z": 3
+      },
+      "399b56c7-40b1-4a95-b869-4db1d63c3565": {
+        "source": {
+          "id": "06ce9cf6-881c-4426-a968-6574b1278ee4",
+          "selector": "g:nth-child(1) g:nth-child(4) g:nth-child(2) circle:nth-child(1)     ",
+          "port": "AWS::DependencyLink-*"
+        },
+        "target": {
+          "id": "0f622260-58f4-4bee-a44b-e8145958f479"
+        },
+        "z": 3
+      },
+      "4f82fdea-7deb-4c91-82e2-53866c2a562c": {
+        "size": {
+          "width": 60,
+          "height": 60
+        },
+        "position": {
+          "x": 120,
+          "y": 160
+        },
+        "z": 0,
+        "embeds": []
+      }
+    }
+  }
+}
