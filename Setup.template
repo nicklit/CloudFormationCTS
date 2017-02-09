@@ -266,9 +266,35 @@
               "Resource": [
                 "*"
               ]
+            },
+            {
+              "Sid": "DenyThisCloudformation",
+              "Effect": "Deny",
+              "NotAction": [
+                "cloudformation:DescribeAccountLimits",
+                "cloudformation:DescribeChangeSet",
+                "cloudformation:DescribeStackEvents",
+                "cloudformation:DescribeStackResource",
+                "cloudformation:DescribeStackResources",
+                "cloudformation:DescribeStacks",
+                "cloudformation:GetStackPolicy",
+                "cloudformation:GetTemplate",
+                "cloudformation:GetTemplateSummary",
+                "cloudformation:ListChangeSets",
+                "cloudformation:ListStackResources",
+                "cloudformation:ListStacks"
+              ],
+              "Resource": [
+                {
+                  "Ref": "AWS::StackId"
+                }
+              ]
             }
           ]
         },
+        "Users": [
+          "NickIAMTesting"
+        ],
         "Roles": [
           {
             "Ref": "AdministratorCFT"
