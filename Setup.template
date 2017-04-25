@@ -298,7 +298,6 @@
                 "IsMultiRegionTrail": "True",
                 "IsLogging": "True",
                 "S3BucketName": "cloudtrailbucketiu"
-                
             },
             "Metadata": {
                 "AWS::CloudFormation::Designer": {
